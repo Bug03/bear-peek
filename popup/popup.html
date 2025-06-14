@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bear Peek</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <img src="../icons/icon48.png" alt="Bear Peek" class="logo-icon">
+                <h1 class="title">Bear Peek</h1>
+            </div>
+        </header>
+        
+        <main class="main-content">
+            <div class="status-section">
+                <div class="status-indicator" id="statusIndicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text" id="statusText">Ready</span>
+                </div>
+            </div>
+            
+            <div class="action-section">
+                <button class="primary-btn" id="extractBtn">
+                    <span class="btn-icon">📄</span>
+                    Extract Content
+                </button>
+                
+                <button class="secondary-btn" id="settingsBtn">
+                    <span class="btn-icon">⚙️</span>
+                    Settings
+                </button>
+            </div>
+            
+            <div class="content-section" id="contentSection" style="display: none;">
+                <div class="content-header">
+                    <h3>Extracted Content</h3>
+                    <button class="close-btn" id="closeBtn">✕</button>
+                </div>
+                <div class="content-preview" id="contentPreview">
+                    <!-- Extracted content will be displayed here -->
+                </div>
+            </div>
+            
+            <div class="loading-section" id="loadingSection" style="display: none;">
+                <div class="spinner"></div>
+                <p class="loading-text">Processing content...</p>
+            </div>
+        </main>
+        
+        <footer class="footer">
+            <div class="info-text">
+                <small>Bear Peek v1.0.0</small>
+            </div>
+        </footer>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html> 
