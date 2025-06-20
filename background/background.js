@@ -78,11 +78,17 @@ async function handleMessage(request, sender) {
         case 'saveSettings':
             return await saveUserSettings(data);
             
+        case 'contentChanged':
+            // Handle content change notifications from content script
+            console.log('Content changed on page:', data?.url);
+            return { acknowledged: true };
+            
         case 'ping':
             return { status: 'pong', timestamp: Date.now() };
             
         default:
-            throw new Error(`Unknown action: ${action}`);
+            console.log('Unknown message action:', action);
+            return { acknowledged: true, warning: `Unknown action: ${action}` };
     }
 }
 
@@ -94,6 +100,8 @@ async function processExtractedContent(data, sender) {
     const processId = generateProcessId();
     
     try {
+        console.log('Processing content:', { contentLength: content?.content?.length, url, title });
+        
         // Store process in active processes
         extensionState.activeProcesses.set(processId, {
             content,
@@ -109,8 +117,11 @@ async function processExtractedContent(data, sender) {
             message: 'Processing content...'
         });
         
+        // Extract actual content string from the data structure
+        const contentText = content?.content || content || '';
+        
         // Here you would integrate with AI APIs or other processing services
-        const processedResult = await performContentAnalysis(content, url, title);
+        const processedResult = await performContentAnalysis(contentText, url, title);
         
         // Store processed result
         await storeProcessedContent(processId, processedResult);
@@ -162,6 +173,12 @@ async function performContentAnalysis(content, url, title) {
     // Simulate processing time
     await delay(1000);
     
+    // Ensure content is a string
+    if (typeof content !== 'string') {
+        console.warn('Content is not a string:', typeof content);
+        content = String(content || '');
+    }
+    
     // This is where you would integrate with AI APIs like:
     // - OpenAI GPT for summarization
     // - Claude for analysis
@@ -169,13 +186,14 @@ async function performContentAnalysis(content, url, title) {
     
     const analysis = {
         summary: generateBasicSummary(content),
-        wordCount: content.split(/\s+/).length,
-        readingTime: Math.ceil(content.split(/\s+/).length / 200), // ~200 WPM
+        wordCount: content.split(/\s+/).filter(word => word.length > 0).length,
+        readingTime: Math.ceil(content.split(/\s+/).filter(word => word.length > 0).length / 200), // ~200 WPM
         keyTopics: extractKeyTopics(content),
         sentiment: 'neutral', // Placeholder
         extractedAt: new Date().toISOString(),
         url: url,
-        title: title
+        title: title,
+        contentLength: content.length
     };
     
     return analysis;
@@ -185,33 +203,66 @@ async function performContentAnalysis(content, url, title) {
  * Generate a basic summary (placeholder implementation)
  */
 function generateBasicSummary(content) {
-    // Simple extractive summary - take first few sentences
-    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 20);
-    const summaryLength = Math.min(3, sentences.length);
+    // Ensure content is a string
+    if (typeof content !== 'string') {
+        console.warn('generateBasicSummary: content is not a string:', typeof content);
+        content = String(content || '');
+    }
     
-    return sentences.slice(0, summaryLength).join('. ').trim() + '.';
+    if (!content || content.length < 50) {
+        return 'Content too short to summarize.';
+    }
+    
+    try {
+        // Simple extractive summary - take first few sentences
+        const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 20);
+        const summaryLength = Math.min(3, sentences.length);
+        
+        if (sentences.length === 0) {
+            return 'No clear sentences found for summary.';
+        }
+        
+        return sentences.slice(0, summaryLength).join('. ').trim() + '.';
+    } catch (error) {
+        console.error('Error generating summary:', error);
+        return 'Error generating summary.';
+    }
 }
 
 /**
  * Extract key topics (basic implementation)
  */
 function extractKeyTopics(content) {
-    // Simple keyword extraction
-    const words = content.toLowerCase()
-        .replace(/[^\w\s]/g, '')
-        .split(/\s+/)
-        .filter(word => word.length > 4);
-    
-    const wordCount = {};
-    words.forEach(word => {
-        wordCount[word] = (wordCount[word] || 0) + 1;
-    });
-    
-    // Get top 5 most frequent words
-    return Object.entries(wordCount)
-        .sort(([,a], [,b]) => b - a)
-        .slice(0, 5)
-        .map(([word]) => word);
+    try {
+        // Ensure content is a string
+        if (typeof content !== 'string') {
+            content = String(content || '');
+        }
+        
+        if (!content) {
+            return [];
+        }
+        
+        // Simple keyword extraction
+        const words = content.toLowerCase()
+            .replace(/[^\w\s]/g, '')
+            .split(/\s+/)
+            .filter(word => word.length > 4);
+        
+        const wordCount = {};
+        words.forEach(word => {
+            wordCount[word] = (wordCount[word] || 0) + 1;
+        });
+        
+        // Get top 5 most frequent words
+        return Object.entries(wordCount)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 5)
+            .map(([word]) => word);
+    } catch (error) {
+        console.error('Error extracting key topics:', error);
+        return [];
+    }
 }
 
 /**
@@ -436,4 +487,4 @@ self.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection in background:', event.reason);
 });
 
-console.log('Bear Peek background service worker loaded'); 
+console.log('Bear Peek background service worker loaded');
